@@ -1,6 +1,3 @@
-/*
- * Begin Exhibitor list animations -- 
- */
 $(document).ready(function(){
 	var bat = 'battery';
 	var evt = 'evtech';
@@ -16,10 +13,18 @@ $(document).ready(function(){
 	var alphaPiece;
 	var amDiv = $('.alphabetical_menu').html();
 	
+	var originalIDs = [];
+	var duplicateIDs = [];
+	
+	//collect all original ID's and store in array to re-apply later
+	$('.list_group').each(function(){
+		var originalID = $(this).attr('id');
+		originalIDs.push(originalID);
+	});
 	
 	//the below vars convert the array to a string and then replace commas with pipes...KEEP THIS
 	//var lettString = letters.toString();
-	//var properString = lettString.replace(new RegExp(',','g'), '|');		
+	//var properString = lettString.replace(new RegExp(',','g'), '|');
 	
 	function makeList(expo){
 		//create relevant divs and give em a wrapper div. Also gives class to each exhibitor of what letter category it is...
@@ -62,12 +67,13 @@ $(document).ready(function(){
 			var ab = $(this);
 			alphaPieces.forEach(function(item){
 				if(appendz == item){
-					ab.replaceWith('<a href="exhibitor-list-test#' + item + '" class="scroll" title="go to '+item+'">' + item + '</a>')
+					ab.replaceWith('<a href="#' + item + '" class="scroll" title="go to '+item+'">' + item + '</a>');
 				}
 			})
 		});
 	}
 	
+	//call function first time to give alphabetical menu at the top relevant links
 	linkLettr($('.list_group'), 'id');
 	
 	//buttons for fade in / out each one
@@ -94,6 +100,17 @@ $(document).ready(function(){
 				topThis.siblings().addClass('minimised');
 				topThis.addClass('selected');
 				topThis.siblings().removeClass('selected');
+				
+				//remove ID's and add to relevant section...for scroller
+				$('.'+cvalue+'-wrapper').siblings().children().each(function() {					
+						$(this).removeAttr('id');
+				});
+				//detect appropriate section and apply ID's
+				$('.'+cvalue+'-container').each(function(){
+					var eyeDee = $(this).attr('title')
+					$(this).attr('id', eyeDee);
+				});
+				
 				return;
 			}else if($('#batteryButton').hasClass('maximised') && $('#evButton').hasClass('maximised') && $('#chargeButton').hasClass('maximised') && $('#showAll').hasClass('maximised')){
 				//get relevant letters and add to array
@@ -108,6 +125,13 @@ $(document).ready(function(){
 				topThis.addClass('maximised');
 				topThis.siblings().removeClass('maximised');
 				topThis.siblings().addClass('minimised');
+				//remove original ID's
+				$('.list_group').removeAttr('id');
+				//detect appropriate section and apply ID's
+				$('.'+cvalue+'-container').each(function(){
+					var eyeDee = $(this).attr('title')
+					$(this).attr('id', eyeDee);
+				});
 				return;
 			}
 		});
@@ -118,7 +142,7 @@ $(document).ready(function(){
 	exhiButtons('#evButton', '#batteryButton', '#chargeButton');
 	exhiButtons('#chargeButton', '#evButton', '#batteryButton');
 	
-	//show all buttons resets all classes and essentially returns the page to the state it was in when it loaded essentially...
+	//show all buttons resets all classes and essentially returns the page to the state it was in when it loaded...
 	$('#showAll').click(function(){
 		var topThis = $(this);
 		cvalue = $(this).attr('title');
@@ -126,11 +150,38 @@ $(document).ready(function(){
 		if($(this).hasClass('maximised')){
 			return;
 		}else{
+			
+			//get rid of all other ID's at this level that might be duplicates
+			$('.all').siblings().children().each(function() {					
+				$(this).removeAttr('id');
+			});
+			
+			//Probably not the best way to do this but I couldnt figure out any other way...
+			//Gets the IDs of the original .list_group divs and stores into array then re-populates as appropriate
+			//works with 2 arrays filling one as the other empties and then uses the other the same way the second time round...got the idea from my own toggle script written elsewhere...
+			if(originalIDs.length != 0){
+				$('.list_group').each(function(){
+					var origID = originalIDs.shift();
+					$(this).attr('id', origID);
+					duplicateIDs.push(origID);
+				});
+			}else if(originalIDs.length == 0){
+				$('.list_group').each(function(){
+					var origID = duplicateIDs.shift();
+					$(this).attr('id', origID);
+					originalIDs.push(origID);
+				});
+			}
+			
+			//function that uses ID's to generate links and used for sroller
 			linkLettr($('.list_group'), 'id');
 			
+			//animation to fade back to original state
 			$('.'+currentBig+'-wrapper').fadeOut(500, function(){
 				$('.all').fadeIn(500);
 			});
+			
+			//reset all classes to original page load states
 			topThis.siblings().addClass('maximised');
 			topThis.siblings().removeClass('minimised');
 			topThis.removeClass('minimised');
@@ -140,14 +191,14 @@ $(document).ready(function(){
 		}
 	});
 	
-	$(".scroll").click(function(event){		
+	//scroller between letters - NOTE - as of jQuery 1.7 live() is deprecated...use on() instead.
+	$(".scroll").live('click', function(event){		
 		event.preventDefault();
         if(this.hash == "#top"){
        		$('html, body').animate({scrollTop:0}, 3000, 'swing');
        		return;
         }else{
    			$('html,body').animate({scrollTop:$(this.hash).offset().top}, 3000, 'swing');
-   			alert(this.hash);
    			return;
         }
 	});
